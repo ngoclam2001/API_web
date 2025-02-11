@@ -1,5 +1,6 @@
 <?php
-include 'autoload.php';
+include 'db.php';
+global $core;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -34,7 +35,7 @@ include 'autoload.php';
             <form action="" method="post">
                 <select name="options">
                     <option value="" selected disabled>Chọn Tỉnh/Thành phố</option>
-                    <?php $list_city = readCSV("list_all.csv");foreach($list_city as $code => $name){ ?>
+                    <?php $list_city = $core->readCSV("list_all.csv");foreach($list_city as $code => $name){ ?>
                         <option value="<?=$code?>"><?=$name?></option>
                     <?php }; ?>
                 </select>
