@@ -5,110 +5,96 @@ header("Access-Control-Allow-Methods: GET,POST,PUT,DELETE");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 class DesktopAPI {
-    private $desktop_path;
+    private $base_path;
 
-    public function __construct() {
-        if (PHP_OS_FAMILY === 'Windows') {
-            $this->desktop_path = $_SERVER['USERPROFILE'] . "\\Desktop";
+    public function __construct($base_path = null) {
+        if ($base_path) {
+            $this->base_path = $base_path;
         } else {
-            $this->desktop_path = $_SERVER['HOME'] . "/Desktop";
+            // Default to a specific directory on the web server
+            $this->base_path = __DIR__ . "/";
         }
-        
     }
 
     public function getContents($path = '') {
-        try {
-            $fullPath = $this->desktop_path . ($path ? DIRECTORY_SEPARATOR . $path : '');
-            
-            if (!file_exists($fullPath)) {
-                throw new Exception("Không tìm thấy đường dẫn!!!");
-            }
+        $fullPath = $this->base_path . ($path ? DIRECTORY_SEPARATOR . $path : '');
+        
+        if (!file_exists($fullPath)) {
+            return false;
+        }
 
-            $items = scandir($fullPath);
-            $result = array(
-                'files' => array(),
-                'folders' => array()
+        $items = scandir($fullPath);
+        $result = array(
+            'files' => array(),
+            'folders' => array()
+        );
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') continue;
+
+            $itemPath = $fullPath . DIRECTORY_SEPARATOR . $item;
+            $itemInfo = array(
+                'name' => $item,
+                'path' => str_replace($this->base_path, '', $itemPath),
+                'size' => filesize($itemPath),
+                'modified' => filemtime($itemPath),
+                'created' => filectime($itemPath)
             );
 
-            foreach ($items as $item) {
-                if ($item === '.' || $item === '..') continue;
-
-                $itemPath = $fullPath . DIRECTORY_SEPARATOR . $item;
-                $itemInfo = array(
-                    'name' => $item,
-                    'path' => str_replace($this->desktop_path, '', $itemPath),
-                    'size' => filesize($itemPath),
-                    'modified' => filemtime($itemPath),
-                    'created' => filectime($itemPath)
-                );
-
-                if (is_dir($itemPath)) {
-                    $result['folders'][] = $itemInfo;
-                } else {
-                    $itemInfo['extension'] = pathinfo($item, PATHINFO_EXTENSION);
-                    $result['files'][] = $itemInfo;
-                }
+            if (is_dir($itemPath)) {
+                $result['folders'][] = $itemInfo;
+            } else {
+                $itemInfo['extension'] = pathinfo($item, PATHINFO_EXTENSION);
+                $result['files'][] = $itemInfo;
             }
-
-            return $this->sendResponse($result);
-        } catch (Exception $e) {
-            return $this->sendError($e->getMessage());
         }
+
+        return $result;
     }
 
     public function createFolder($path) {
-        try {
-            $fullPath = $this->desktop_path . DIRECTORY_SEPARATOR . $path;
-            
-            if (file_exists($fullPath)) {
-                throw new Exception("Thư mục đã tồn tại !!!");
-            }
-
-            if (mkdir($fullPath, 0777, true)) {
-                return $this->sendResponse(array(
-                    'message' => 'Folder created successfully',
-                    'path' => $path
-                ));
-            } else {
-                throw new Exception("Failed to create folder");
-            }
-        } catch (Exception $e) {
-            return $this->sendError($e->getMessage());
+        $fullPath = $this->base_path . DIRECTORY_SEPARATOR . $path;
+        
+        if (file_exists($fullPath)) {
+            return false;
         }
+
+        return mkdir($fullPath, 0777, true);
     }
+    public function createFolderInParent($parentPath, $newFolderName) {
+        $fullParentPath = $this->base_path . DIRECTORY_SEPARATOR . $parentPath;
+        
+        if (!file_exists($fullParentPath) || !is_dir($fullParentPath)) {
+            return false;
+        }
 
+        $newFolderPath = $fullParentPath . DIRECTORY_SEPARATOR . $newFolderName;
+        
+        if (file_exists($newFolderPath)) {
+            return false;
+        }
+
+        return mkdir($newFolderPath, 0777, true);
+    }
     public function delete($path) {
-        try {
-            $fullPath = $this->desktop_path . DIRECTORY_SEPARATOR . $path;
-            
-            if (!file_exists($fullPath)) {
-                throw new Exception("Path not found");
-            }
+        $fullPath = $this->base_path . DIRECTORY_SEPARATOR . $path;
+        
+        if (!file_exists($fullPath)) {
+            return false;
+        }
 
-            if (is_dir($fullPath)) {
-                $this->deleteDirectory($fullPath);
-            } else {
-                unlink($fullPath);
-            }
-
-            return $this->sendResponse(array(
-                'message' => 'Item deleted successfully',
-                'path' => $path
-            ));
-        } catch (Exception $e) {
-            return $this->sendError($e->getMessage());
+        if (is_dir($fullPath)) {
+            return $this->deleteDirectory($fullPath);
+        } else {
+            return unlink($fullPath);
         }
     }
 
     public function search($keyword) {
-        try {
-            $results = array();
-            $this->searchInDirectory($this->desktop_path, $keyword, $results);
+        $results = array();
+        $this->searchInDirectory($this->base_path, $keyword, $results);
 
-            return $this->sendResponse($results);
-        } catch (Exception $e) {
-            return $this->sendError($e->getMessage());
-        }
+        return $results;
     }
 
     private function searchInDirectory($dir, $keyword, &$results) {
@@ -122,7 +108,7 @@ class DesktopAPI {
             if (stripos($item, $keyword) !== false) {
                 $results[] = array(
                     'name' => $item,
-                    'path' => str_replace($this->desktop_path, '', $path),
+                    'path' => str_replace($this->base_path, '', $path),
                     'type' => is_dir($path) ? 'folder' : 'file',
                     'size' => filesize($path)
                 );
@@ -135,7 +121,7 @@ class DesktopAPI {
     }
 
     private function deleteDirectory($dir) {
-        if (!file_exists($dir)) return;
+        if (!file_exists($dir)) return false;
 
         $items = scandir($dir);
         foreach ($items as $item) {
@@ -151,15 +137,17 @@ class DesktopAPI {
         return rmdir($dir);
     }
 
-    private function sendResponse($data) {
-        http_response_code(200);
-        return json_encode($data);
-    }
+    public function searchFolder($folderName, $searchPath = '') {
+        $results = array();
+        $fullPath = $this->base_path . ($searchPath ? DIRECTORY_SEPARATOR . $searchPath : '');
+        
+        if (!file_exists($fullPath) || !is_dir($fullPath)) {
+            return false;
+        }
 
-    private function sendError($message) {
-        http_response_code(500);
-        return json_encode(array('error' => $message));
+        $this->searchInDirectory($fullPath, $folderName, $results);
+
+        return $results;
     }
 }
-
 ?>

@@ -1,6 +1,13 @@
 <?php
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
 include 'db.php';
+
 global $core;
+$db = new dbBasic();
+
+$db->connect();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,15 +40,61 @@ global $core;
         <h2 class="title_top">Tạo thư mục</h2>
         <div class="container">
             <form action="" method="post">
-                <select name="options">
+                <select name="options_city">
                     <option value="" selected disabled>Chọn Tỉnh/Thành phố</option>
                     <?php $list_city = $core->readCSV("list_all.csv");foreach($list_city as $code => $name){ ?>
                         <option value="<?=$code?>"><?=$name?></option>
                     <?php }; ?>
                 </select>
-                <input type="submit" value="Tạo">
+                <select name="options_district">
+                    <option value="" selected disabled>Chọn Quận/Huyện</option>
+                </select>
+                <input type="submit" style="cursor: pointer;" value="Tạo">
+                <div id="existFolder" style="display: none; color: green; margin-top: 10px;">
+                    
+                </div>
+                <div id="notExistFolder" style="display: none; color: red; margin-top: 10px;">
+                    
+                </div>
             </form>
         </div>
     </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('select[name="options_city"]').change(function() {
+            var selectedCity = $(this).val();
+            $.ajax({
+                    type: 'POST',
+                    url: 'get_districts.php',
+                    data: { districts_id: selectedCity },
+                    success: function(response) {
+                        $('select[name="options_district"]').html(response);
+                    }
+                });
+            });
+            $('form').submit(function(event) {
+                event.preventDefault();
+                var selectedCity = $('select[name="options_city"]').val();
+                var selectedDistrict = $('select[name="options_district"]').val();
+                $.ajax({
+                    type: 'POST',
+                    url: 'check_folder.php',
+                    data: { city_id: selectedCity, 
+                        district_id: selectedDistrict 
+                    },
+                    success: function(response) {
+                        if(response == 1){
+                            $('#existFolder').html('Thư mục tạo không thành công hoặc đã tồn tại!').show();
+                            $('#notExistFolder').hide();
+                        }else{
+                            $('#notExistFolder').html('Thư mục được tạo thành công!').show();
+                            $('#existFolder').hide();
+                        }
+                    },
+                });
+            });
+        });
+    </script>
 </body>
 </html>

@@ -2,8 +2,8 @@
 define('DEFAULT_TIME_FORMAT', 'Y-m-d H:i:s');
 $servername = "localhost";
 $username = "admin";
-$password = "123456";
-$dbname = "";
+$password = "723G8-KRULUEz/L]";
+$dbname = "test";
 
 global $connect_db, $cnn;
 $connect_db = false; $cnn = null;
@@ -327,8 +327,6 @@ class core
     }
 }
 $core = new core;
-
 if ($connect_db && $cnn) {
     $cnn->close();
 }
-exit();
