@@ -77,6 +77,10 @@ $db->connect();
                 event.preventDefault();
                 var selectedCity = $('select[name="options_city"]').val();
                 var selectedDistrict = $('select[name="options_district"]').val();
+                if(!selectedCity || !selectedDistrict){
+                    alert('Vui lòng chọn Tỉnh/Thành phố và Quận/Huyện!');
+                    return;
+                }
                 $.ajax({
                     type: 'POST',
                     url: 'check_folder.php',
@@ -84,7 +88,7 @@ $db->connect();
                         district_id: selectedDistrict 
                     },
                     success: function(response) {
-                        if(response == 1){
+                        if(response == 0){
                             $('#existFolder').html('Thư mục tạo không thành công hoặc đã tồn tại!').show();
                             $('#notExistFolder').hide();
                         }else{

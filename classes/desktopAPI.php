@@ -9,10 +9,10 @@ class DesktopAPI {
 
     public function __construct($base_path = null) {
         if ($base_path) {
-            $this->base_path = $base_path;
+            $this->base_path = dirname(__DIR__ . "/");
         } else {
             // Default to a specific directory on the web server
-            $this->base_path = __DIR__ . "/";
+            $this->base_path = dirname(__DIR__ . "/");
         }
     }
 
@@ -62,19 +62,21 @@ class DesktopAPI {
         return mkdir($fullPath, 0777, true);
     }
     public function createFolderInParent($parentPath, $newFolderName) {
-        $fullParentPath = $this->base_path . DIRECTORY_SEPARATOR . $parentPath;
-        
+        $fullParentPath = realpath($this->base_path) . DIRECTORY_SEPARATOR . trim($parentPath, DIRECTORY_SEPARATOR);
+        $fullParentPath = realpath($this->base_path) . DIRECTORY_SEPARATOR . trim($parentPath, " \\/");
+
         if (!file_exists($fullParentPath) || !is_dir($fullParentPath)) {
             return false;
         }
 
         $newFolderPath = $fullParentPath . DIRECTORY_SEPARATOR . $newFolderName;
-        
+
         if (file_exists($newFolderPath)) {
             return false;
         }
 
-        return mkdir($newFolderPath, 0777, true);
+        mkdir($newFolderPath, 0777, true);
+        return true;
     }
     public function delete($path) {
         $fullPath = $this->base_path . DIRECTORY_SEPARATOR . $path;
@@ -144,10 +146,7 @@ class DesktopAPI {
         if (!file_exists($fullPath) || !is_dir($fullPath)) {
             return false;
         }
-
-        $this->searchInDirectory($fullPath, $folderName, $results);
-
-        return $results;
+        return true;
     }
 }
 ?>
